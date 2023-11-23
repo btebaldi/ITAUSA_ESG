@@ -87,117 +87,19 @@ corr <- cor(tbl[, .(Forest, Forest_perc, CO2,
                     Idh, pwt_pop, pwt_hc, pwt_ctfp, g, GDP_1)],
             use = "pairwise.complete.obs")
 
-# Grafico -----------------------------------------------------------------
-ggcorrplot(corr,
-           hc.order = TRUE, 
-           type = "full",
-           lab = TRUE, 
-           lab_size = 3, 
-           show.diag = TRUE,
-           method="square",
-           colors = c("tomato2", "white", "springgreen3"), 
-           title="Environment: Biodiversity & protected areas", 
-           ggtheme=theme_bw, 
-           tl.srt = 90)
 
+# Data completion ---------------------------------------------------------
 
-
-# Correlation matrix
-corr <- cor(tbl[, .(Gini, Idh)],
-            use = "pairwise.complete.obs")
-
-tbl[, .(x = sum(is.na(Land_protected))), iso3] |> dplyr::arrange(desc(x))
-tbl[, .(x = sum(is.na(Marine_protected))), iso3] |> dplyr::arrange(desc(x))
-tbl[, .(x = sum(is.na(Land_n_Marine))), iso3] |> dplyr::arrange(desc(x))
-
-tbl[, .(x = sum(is.na(pwt_ctfp))), iso3] |> dplyr::arrange(desc(x))->bb
-
-
-tbl[is.na(Land_n_Marine)]
+# Complete with pwt
 my_pwt10 <- pwt10::pwt10.01 %>% select(isocode, year, ctfp)
-
 tbl <- left_join(tbl, my_pwt10, by = c("iso3"="isocode", "year"="year"))
 
+# Resume nature variables in a single factor
+tbl <- tbl[!is.na(Forest),]
 pca <- prcomp(tbl[, .(Bird, Fish, Plant, Mammal)], scale = TRUE)
 summary(pca)
 tbl$pca1_nature <- pca$x[, 1]
 
-summary(tbl)
-colnames(tbl)
-plm(g ~ Gini + Idh + pca1_nature + dlnCO2*ctfp + GDP_1 + pwt_hc + Forest_perc,
-    data=tbl,
-    index=c("iso3", "year"),
-    model="within") %>% summary()
-
-lm(g ~ Gini + Idh + pca1_nature + dlnCO2*ctfp + GDP_1 + pwt_hc - 1,
-    data=tbl) %>% summary()
-
-
-plm(y ~ x1, data=Panel, index=c("country", "year"), model="within")
-
-lm(RuleOfLaw~Forest_perc, data = tbl) %>% summary()
-
-
-
-
-
-tbl[iso3 %chin% c("AUS"), wdi_EN.MAM.THRD.NO]
-tbl[iso3 %chin% c("AUS"), wdi_EN.MAM.THRD.NO]
-
-range(tbl$wdi_HD.HCI.OVRL, na.rm = TRUE)
-
-tbl |>
-  ggplot(aes(x = wdi_HD.HCI.OVRL, y = wdi_SI.POV.GINI)) + 
-  geom_point(mapping = aes(colour = iso3)) + 
-  geom_smooth(method = "lm", show.legend = FALSE) +
-  theme_bw() +
-  theme(legend.position = "none") +
-  labs(y = "Gini", x = "IDH") #+ xlim(0.28, 0.89)
-
-tbl |>
-  ggplot(aes(x = hdi, y = wdi_SI.POV.GINI)) + 
-  geom_point( alpha = 0.5) + 
-  geom_smooth(method = "lm", show.legend = FALSE) +
-  theme_bw() +
-  theme(legend.position = "none") +
-  labs(y = "Gini", x = "IDH")
-
-
-
-lm(wdi_SI.POV.GINI ~ hdi, data = tbl) |> summary()
-lm(wdi_HD.HCI.OVRL ~ hdi, data = tbl) |> summary()
-
-hist(tbl$wdi_NY.GDP.PCAP.KD, breaks = "FD")
-hist(log(tbl$wdi_NY.GDP.PCAP.KD), breaks = "FD")
-
-setorderv(tbl, c("iso3","year"))
-
-
-
-
-
-
-
-
-
-
-# Load database -----------------------------------------------------------
-
-colnames(tbl)
-
-# Correlation matrix
-corr <- cor(tbl[, .("Bird species, threatened" = Bird,
-                    "Fish species, threatened" = Fish, 
-                    "Plant species (higher), threatened" = Plant, 
-                    "Mammal species, threatened" = Mammal, 
-                    "Terrestrial protected areas" = wdi_ER.LND.PTLD.ZS, 
-                    "Marine protected areas" = wdi_ER.MRN.PTMR.ZS,
-                    "Forest area (sq. km)" = wdi_AG.LND.FRST.K2,
-                    "Forest area (% of land area)" = wdi_AG.LND.FRST.ZS,
-                    "CO2 emissions (kt)" = wdi_EN.ATM.CO2E.KT,
-                    "Total greenhouse gas emissions" = wdi_EN.ATM.GHGT.KT.CE,
-                    "Total natural resources rents (% of GDP)" = wdi_NY.GDP.TOTL.RT.ZS)],
-            use = "pairwise.complete.obs")
 
 # Grafico -----------------------------------------------------------------
 ggcorrplot(corr,
@@ -213,7 +115,108 @@ ggcorrplot(corr,
            tl.srt = 90)
 
 
-ggsave(filename = "./Graficos/Aula 1/15_Correlograma.png",units = "in",
-       width = 8, height = 6,dpi = 100)
 
 
+# Panel estimation --------------------------------------------------------
+
+colnames(tbl)
+
+
+#  Run a Panel Estimation
+pmdl_01 <- plm(g ~ Gini + Idh + pca1_nature + dlnCO2*ctfp + GDP_1 + pwt_hc + Forest_perc + Natural_resources_rents + RuleOfLaw,
+               data=tbl,
+               index=c("iso3", "year"),
+               model="within")
+
+summary(pmdl_01)
+
+
+#  Run a Panel Estimation
+pmdl_02 <- plm(g ~ Gini + Idh + pca1_nature + dlnCO2*ctfp + GDP_1 + pwt_hc + Forest_perc,
+               data=tbl,
+               index=c("iso3", "year"),
+               model="within")
+
+summary(pmdl_02)
+
+
+
+#  Run a Panel Estimation (retirada do  GDP_1)
+pmdl_03 <- plm(g ~ Gini + Idh + pca1_nature + dlnCO2*ctfp + pwt_hc + Forest_perc + Natural_resources_rents + RuleOfLaw,
+               data=tbl,
+               index=c("iso3", "year"),
+               model="within")
+
+summary(pmdl_03)
+
+
+#  Run a Panel Estimation (retirada do  GDP_1, Forest_perc,
+#  Natural_resources_rents, RuleOfLaw)
+pmdl_04 <- plm(g ~ Gini + Idh + pca1_nature + dlnCO2*ctfp + pwt_hc,
+               data=tbl,
+               index=c("iso3", "year"),
+               model="within")
+
+summary(pmdl_04)
+
+
+# OLS Average Estimation --------------------------------------------------
+
+# Compute the averages for every country
+tbl_ols <- tbl %>% 
+  group_by(iso3) %>% 
+  summarise(g = mean(g, na.rm = TRUE),
+            Gini = mean(Gini, na.rm=TRUE),
+            Idh = mean(Idh, na.rm=TRUE),
+            pca1_nature = mean(pca1_nature, na.rm=TRUE),
+            dlnCO2 = mean(dlnCO2, na.rm=TRUE),
+            ctfp = mean(ctfp, na.rm=TRUE),
+            GDP_1 = mean(GDP_1, na.rm=TRUE),
+            pwt_hc = mean(pwt_hc, na.rm=TRUE),
+            Forest_perc = mean(Forest_perc, na.rm=TRUE),
+            Natural_resources_rents = mean(Natural_resources_rents, na.rm=TRUE),
+            RuleOfLaw = mean(RuleOfLaw, na.rm=TRUE))
+
+tbl_ols
+
+
+#  Run a OLS Estimation on the averages
+pmdl_05 <- lm(g ~ Gini + Idh + pca1_nature + dlnCO2*ctfp + GDP_1 + pwt_hc + Forest_perc + Natural_resources_rents + RuleOfLaw,
+               data=tbl_ols)
+
+summary(pmdl_05)
+
+
+#  Run a OLS Estimation on the averages
+pmdl_06 <- lm(g ~ Gini + Idh + pca1_nature + dlnCO2*ctfp + GDP_1 + pwt_hc + Forest_perc, data=tbl)
+
+summary(pmdl_06)
+
+
+#  Run a OLS Estimation on the averages
+pmdl_07 <- lm(g ~ Gini + Idh + pca1_nature + dlnCO2*ctfp + pwt_hc, data=tbl)
+
+summary(pmdl_07)
+
+
+
+# Arellano–Bond estimator -------------------------------------------------
+
+#  Run a Panel Estimation
+pmdl_ab <- pgmm(g ~ Gini + Idh + dlnCO2*ctfp + GDP_1 + pwt_hc + Forest_perc + Natural_resources_rents + RuleOfLaw |  lag(GDP_1, 2:4),
+               data=tbl,
+               effect = "individual",
+               model = "onestep",
+               index=c("iso3", "year"))
+
+summary(pmdl_ab)
+
+
+#  Run a Panel Estimation
+pmdl_ab2 <- pgmm(g ~ Gini + Idh + dlnCO2*ctfp + GDP_1 + pwt_hc + Forest_perc |  lag(GDP_1, 2:4),
+                data=tbl,
+                effect = "individual",
+                model = "onestep",
+                index=c("iso3", "year"))
+
+summary(pmdl_ab2)
