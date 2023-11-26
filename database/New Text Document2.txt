@@ -1,0 +1,65 @@
+HomeGlobal Health Data Exchange - Discover the World's Health Data
+Main menu
+Home
+Countries
+Series and Systems
+Organizations
+Keywords
+IHME Data
+About the GHDx
+Help
+Home > Estimate
+Global Educational Attainment Distributions 1970-2030
+General Info
+Citation
+Files (3)
+
+Email Print
+Provider 
+Institute for Health Metrics and Evaluation (IHME)
+Geography 
+Global
+Coverage type 
+Global
+Time period covered 
+01/1970 - 12/2030
+Data type
+Estimate
+Summary 
+IHME researchers produced this dataset as part of an analysis measuring and forecasting progress by countries towards education-related Sustainable Development Goal (SDG) targets. Annual estimates were created for the average years of schooling and single-year distribution of educational attainment by sex for adults ages 25-29 for 1970 to 2018. Projections were also generated for these indicators to 2030. Estimates were created for the 195 countries and territories examined in the Global Burden of Disease 2017 study. The estimates were produced using a compiled database of 3,180 nationally representative surveys and censuses describing the distribution of years of schooling by age and sex.
+https://ghdx.healthdata.org/record/ihme-data/global-educational-attainment-distributions-1970-2030
+
+Keywords 
+Education
+Related publications and visualizations 
+Measuring and forecasting progress towards the education-related SDG targets
+
+Contributors 
+Institute for Health Metrics and Evaluation (IHME)
+Funders 
+Bill and Melinda Gates Foundation (BMGF)
+Publisher 
+Institute for Health Metrics and Evaluation (IHME)
+Publication year 
+2020
+Suggested citation 
+Institute for Health Metrics and Evaluation (IHME). Global Educational Attainment Distributions 1970-2030. Seattle, United States of America: Institute for Health Metrics and Evaluation (IHME), 2020.
+DOI 
+https://doi.org/10.6069/9DTK-Y505
+
+Terms and conditions
+Data made available for download on IHME Websites can be used, shared, modified or built upon by non-commercial users in accordance with the IHME FREE-OF-CHARGE NON-COMMERCIAL USER AGREEMENT. For more information (and inquiries about commercial use), visit IHME Terms and Conditions.
+
+Public files 
+File	Size
+PDF icon Data Release Information Sheet	217.12 KB
+Package icon Educational Attainment Distribution Data [CSV]	7.42 MB
+File Codebook	6.32 KB
+Code files used to produce these data
+Need help downloading files?
+GHDx Entry last modified on: Mar 12, 2022
+Resources
+Contact Us
+Data Sites We Love
+IHME Data Visualizations
+GHDx Instructional Videos
