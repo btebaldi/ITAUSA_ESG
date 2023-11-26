@@ -154,15 +154,15 @@ tbl[is.na(hc) & !is.na(Ich), hc := (ich_mdl$coefficients[1] + ich_mdl$coefficien
 # Complete with pwt
 my_pwt10 <- pwt10::pwt10.01 %>% select(isocode, year, ctfp)
 tbl <- left_join(tbl, my_pwt10, by = c("iso3"="isocode", "year"="year"))
-tbl[is.na(ctfp), .N, iso3]
+# tbl[is.na(ctfp), .N, iso3]
 
 # Data completion of Education --------------------------------------------
 
-Edu_tbl <- fread("C:/Users/bteba/Downloads/IHME_EDUC_DISTRIBUTIONS_1970_2030_0/IHME_EDUC_DISTRIBUTIONS_1970_2030_Y2020M04D15.CSV")
+Edu_tbl <- fread("./database/IHME_EDUC_DISTRIBUTIONS_1970_2030_Y2020M04D15.CSV")
 Edu_tbl <- Edu_tbl[year >=2014 & year <2020 & measure == "mean_years",  .(Education = mean(mean)),  .(location_name, year)]
-Edu_tbl[location_name %like% "w", unique(location_name)]
-sort(Edu_tbl[,unique(location_name)])
-Edu_tbl[location_name %like% "Es", ]
+# Edu_tbl[location_name %like% "w", unique(location_name)]
+# sort(Edu_tbl[,unique(location_name)])
+# Edu_tbl[location_name %like% "Es", ]
 
 Edu_tbl$location_name[Edu_tbl$location_name == "Czech Republic"] <- "Czechia"
 Edu_tbl$location_name[Edu_tbl$location_name == "South Korea"] <- "Korea, Rep."
@@ -197,27 +197,36 @@ tbl <- left_join(tbl, Edu_tbl, by=c("country_name"="location_name", "year"="year
 
 Education_mdl <- lm(Education~pwt_hc + Idh + GDP + ctfp, data = tbl)
 tbl$Education2 <- as.numeric(NA)
-tbl[is.na(Education), Education2 := (Education_mdl$coefficients[1] + Education_mdl$coefficients[2] * pwt_hc + Education_mdl$coefficients[3]*Idh + Education_mdl$coefficients[4]*GDP + Education_mdl$coefficients[5]*ctfp)]
+tbl[is.na(Education), Education := (Education_mdl$coefficients[1] + Education_mdl$coefficients[2] * pwt_hc + Education_mdl$coefficients[3]*Idh + Education_mdl$coefficients[4]*GDP + Education_mdl$coefficients[5]*ctfp)]
 
 tbl[] %>% ggplot() + geom_point(aes(pwt_hc, Education, colour = iso3), alpha=0.5) +
   theme_bw() +
   theme(legend.position = "none") +
-  labs()
+  labs(title = "correlation by country between Human capital and Education", subtitle = "142 countries with 6 datapoints",
+       x="Human capital")
 
+# tbl[] %>% select(pwt_hc, Education, iso3) %>% na.omit() %>% group_by(iso3) %>% count(iso3) %>% arrange(-n)
+
+ggsave(filename = "./graficos/HumanCapital_Education.png",
+       plot = last_plot(),
+       units = "in",
+       scale = 1.5,
+       width = 8, height = 6,
+       dpi = 100)
 
 
 # Estatisticas Descritiva -------------------------------------------------
 
 tbl[, .(year, 
-        Forest, 
+        # Forest, 
         Forest_perc, 
         CO2,
-        Greenhouse, 
+        # Greenhouse, 
         Bird, Fish, Plant, Mammal, 
         Land_protected, Marine_protected, Land_n_Marine,
         Ich,
         GDP,
-        GDP_r,
+        # GDP_r,
         Natural_resources_rents,
         RuleOfLaw,
         Gini,
@@ -226,6 +235,10 @@ tbl[, .(year,
         Education,
         ctfp, 
         g)] %>% summary()
+
+# tbl %>% count(iso3) %>% arrange(n)
+
+# 194 countries with 6 datapoints
 
 #  carbon total factor productivity
 # PWT provides a ‘current PPP’ TFP series (CTFP),
@@ -257,24 +270,44 @@ ggcorrplot(corr,
            show.diag = TRUE,
            method="square",
            colors = c("tomato2", "white", "springgreen3"), 
-           title="Environment: Biodiversity & protected areas", 
+           title="Environment: Biodiversity & protected areas - correlation", 
            ggtheme=theme_bw, 
            tl.srt = 90)
 
 
+
+ggsave(filename = "./graficos/correlation.png",
+       plot = last_plot(),
+       units = "in",
+       scale = 2,
+       width = 8, height = 6,
+       dpi = 100)
 
 
 # Panel estimation --------------------------------------------------------
 
 
 #  Run a Panel Estimation
-pmdl_01 <- plm(g ~ Gini + Idh + pca1_nature + dlnCO2*ctfp + GDP_1 + hc + Forest_perc + Natural_resources_rents + RuleOfLaw,
+pmdl_01 <- plm(g ~ Gini + Idh + pca1_nature + dlnCO2*ctfp + GDP_1 + Education + Forest_perc + Natural_resources_rents + RuleOfLaw,
                data=tbl,
+               # effect = "individual",
+               # effect = "time",
+               effect = "twoways",
                index=c("iso3", "year"),
                model="within")
 
 summary(pmdl_01)
 
+# 114 paises com 5 anos cada (total de 570 pontos)
+
+# List of economic crises
+# 2014 Russian financial crisis
+# 2014–2017 Brazilian economic crisis
+# 2015 Chinese stock market crash
+# Turkish currency and debt crisis, 2018
+# European sovereign debt crisis (EU) (2009–2019)
+# Greek government-debt crisis (2009–2019)
+ 
 
 # Teste de Hausman (Conclusao do teste: usar modelo de efeito fixo)
 # pmdl_01.r <- plm(g ~ Gini + Idh + pca1_nature + dlnCO2*ctfp + GDP_1 + hc + Forest_perc + Natural_resources_rents + RuleOfLaw,
@@ -286,32 +319,37 @@ summary(pmdl_01)
 
 
 #  Run a Panel Estimation
-pmdl_02 <- plm(g ~ Gini + Idh + pca1_nature + dlnCO2*ctfp + GDP_1 + hc + Forest_perc + Natural_resources_rents,
+pmdl_02 <- plm(g ~ Gini + Idh + dlnCO2*ctfp + GDP_1 + Natural_resources_rents,
                data=tbl,
+               # effect = "individual",
+               # effect = "time",
+               effect = "twoways",
                index=c("iso3", "year"),
                model="within")
 
 summary(pmdl_02)
 
+# 114 paises com 5 anos cada (total de 570 pontos)
 
 
+# ESTIMACAO DESLIGADA
 #  Run a Panel Estimation (retirada do  GDP_1)
-pmdl_03 <- plm(g ~ Gini + Idh + pca1_nature + dlnCO2*ctfp + hc + Forest_perc + Natural_resources_rents + RuleOfLaw,
-               data=tbl,
-               index=c("iso3", "year"),
-               model="within")
+# pmdl_03 <- plm(g ~ Gini + Idh + pca1_nature + dlnCO2*ctfp + hc + Forest_perc + Natural_resources_rents + RuleOfLaw,
+#                data=tbl,
+#                index=c("iso3", "year"),
+#                model="within")
+# 
+# summary(pmdl_03)
 
-summary(pmdl_03)
-
-
+# ESTIMACAO DESLIGADA
 #  Run a Panel Estimation (retirada do  GDP_1, Forest_perc,
 #  Natural_resources_rents, RuleOfLaw)
-pmdl_04 <- plm(g ~ Gini + Idh + pca1_nature + dlnCO2*ctfp + hc,
-               data=tbl,
-               index=c("iso3", "year"),
-               model="within")
-
-summary(pmdl_04)
+# pmdl_04 <- plm(g ~ Gini + Idh + pca1_nature + dlnCO2*ctfp + hc,
+#                data=tbl,
+#                index=c("iso3", "year"),
+#                model="within")
+# 
+# summary(pmdl_04)
 
 
 # OLS Average Estimation --------------------------------------------------
@@ -327,6 +365,7 @@ tbl_ols <- tbl %>%
             ctfp = mean(ctfp, na.rm=TRUE),
             GDP_1 = mean(GDP_1, na.rm=TRUE),
             hc = mean(hc, na.rm=TRUE),
+            Education = mean(hc, na.rm=TRUE),
             Forest_perc = mean(Forest_perc, na.rm=TRUE),
             Natural_resources_rents = mean(Natural_resources_rents, na.rm=TRUE),
             RuleOfLaw = mean(RuleOfLaw, na.rm=TRUE))
@@ -335,29 +374,36 @@ tbl_ols
 
 
 #  Run a OLS Estimation on the averages
-pmdl_05 <- lm(g ~ Gini + Idh + pca1_nature + dlnCO2*ctfp + GDP_1 + hc + Forest_perc + Natural_resources_rents + RuleOfLaw,
+pmdl_05 <- lm(g ~ Gini + Idh + pca1_nature + dlnCO2*ctfp + GDP_1 + Education + Forest_perc + Natural_resources_rents + RuleOfLaw,
               data=tbl_ols)
 
 summary(pmdl_05)
 
+# tbl_ols %>% select(g, Gini, Idh, pca1_nature, dlnCO2, ctfp, GDP_1, Education, Forest_perc, Natural_resources_rents, RuleOfLaw) %>% 
+#   na.omit()
+# 114 paises com informacoes completas
+
 
 #  Run a OLS Estimation on the averages
-pmdl_06 <- lm(g ~ Gini + Idh + pca1_nature + dlnCO2*ctfp + GDP_1 + hc + Forest_perc, data=tbl_ols)
+pmdl_06 <- lm(g ~ Gini + Idh + dlnCO2*ctfp + GDP_1 + Natural_resources_rents + pca1_nature, data=tbl_ols)
 
 summary(pmdl_06)
+# 114 paises com informacoes completas
 
 
-#  Run a OLS Estimation on the averages
-pmdl_07 <- lm(g ~ Gini + Idh + pca1_nature + dlnCO2*ctfp + hc, data=tbl_ols)
-
-summary(pmdl_07)
+# ESTIMACAO DESLIGADA
+# #  Run a OLS Estimation on the averages
+# pmdl_07 <- lm(g ~ Gini + Idh + pca1_nature + dlnCO2*ctfp + hc, data=tbl_ols)
+# 
+# summary(pmdl_07)
 
 
 
 # Arellano–Bond estimator -------------------------------------------------
 
+
 #  Run a Panel Estimation
-pmdl_ab <- pgmm(g ~ Gini + Idh + dlnCO2*ctfp + GDP_1 + hc + Forest_perc + Natural_resources_rents + RuleOfLaw |  lag(GDP_1, 2:4),
+pmdl_ab <- pgmm(g ~ Gini + Idh + dlnCO2*ctfp + GDP_1 + Education + Forest_perc + Natural_resources_rents + RuleOfLaw |  lag(GDP_1, 2:4),
                 data=tbl,
                 effect = "individual",
                 model = "onestep",
@@ -367,7 +413,7 @@ summary(pmdl_ab)
 
 
 #  Run a Panel Estimation
-pmdl_ab2 <- pgmm(g ~ Gini + Idh + dlnCO2*ctfp + GDP_1 + hc + Forest_perc |  lag(GDP_1, 2:4),
+pmdl_ab2 <- pgmm(g ~ Gini + Idh + dlnCO2*ctfp + GDP_1 + Natural_resources_rents|  lag(GDP_1, 2:4),
                  data=tbl,
                  effect = "individual",
                  model = "onestep",
@@ -378,9 +424,11 @@ summary(pmdl_ab2)
 
 write_xlsx(x = list("pmdl_01" = broom::tidy(pmdl_01),
                     "pmdl_02" = broom::tidy(pmdl_02),
-                    "pmdl_03" = broom::tidy(pmdl_03),
-                    "pmdl_04" = broom::tidy(pmdl_04),
+                    # "pmdl_03" = broom::tidy(pmdl_03),
+                    # "pmdl_04" = broom::tidy(pmdl_04),
                     "pmdl_05" = broom::tidy(pmdl_05),
-                    "pmdl_06" = broom::tidy(pmdl_06),
-                    "pmdl_07" = broom::tidy(pmdl_07)),
+                    "pmdl_06" = broom::tidy(pmdl_06)),
+                    # "pmdl_07" = broom::tidy(pmdl_07)),
            path = "Resultado_Regressoes.xlsx")
+
+# PARA AMBOS OS PAINEIS EM AB TOTAL DE AMOSTRA UTILIZADO 456
