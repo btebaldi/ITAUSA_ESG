@@ -327,7 +327,7 @@ summary(pmdl_01)
 # Turkish currency and debt crisis, 2018
 # European sovereign debt crisis (EU) (2009–2019)
 # Greek government-debt crisis (2009–2019)
- 
+
 
 # Teste de Hausman (Conclusao do teste: usar modelo de efeito fixo)
 # pmdl_01.r <- plm(g ~ Gini + Idh + pca1_nature + dlnCO2*ctfp + GDP_1 + hc + Forest_perc + Natural_resources_rents + RuleOfLaw,
@@ -500,7 +500,55 @@ write_xlsx(x = list("pmdl_01" = broom::tidy(pmdl_01),
                     # "pmdl_04" = broom::tidy(pmdl_04),
                     "pmdl_05" = broom::tidy(pmdl_05),
                     "pmdl_06" = broom::tidy(pmdl_06)),
-                    # "pmdl_07" = broom::tidy(pmdl_07)),
+           # "pmdl_07" = broom::tidy(pmdl_07)),
            path = "Resultado_Regressoes.xlsx")
 
 # PARA AMBOS OS PAINEIS EM AB TOTAL DE AMOSTRA UTILIZADO 456
+
+
+
+# Analise grafica ---------------------------------------------------------
+
+
+tbl %>% 
+  colnames()
+
+tbl %>%
+  select(iso3, year, Bird, Fish, Mammal, Plant, Land_protected, Marine_protected, Gini, Idh, Education) %>%
+  group_by(iso3) %>% 
+  summarise(Bird = mean(Bird, na.rm = TRUE),
+            Fish = mean(Fish, na.rm = TRUE),
+            Mammal = mean(Mammal, na.rm = TRUE),
+            Plant = mean(Plant, na.rm = TRUE),
+            Gini = mean(Gini), 
+            Idh = mean(Idh),
+            Education = mean(Education),
+            Land_protected = mean(Land_protected, na.rm = TRUE),
+            Marine_protected = mean(Marine_protected, na.rm = TRUE)) %>% 
+  mutate_at(.vars = c("Bird", "Fish", "Mammal", "Plant", "Land_protected", "Marine_protected",
+                      "Gini", "Idh", "Education"),
+            .funs = scale) %>%
+  pivot_longer(cols = -c(iso3)) %>% 
+  ggplot() +
+  geom_boxplot(mapping = aes(y = name, colour = name, x = value), show.legend = FALSE) +
+  theme_bw() + 
+  labs(x = "Z Score", y = "Variable")
+
+mscale <- function(c){as.numeric(scale(c))}
+
+tbl %>%
+  select(iso3, Gini, Idh, Education) %>% 
+  # group_by(iso3) %>% 
+  # summarise(Bird = mean(Bird, na.rm = TRUE),
+  #           Fish = mean(Fish, na.rm = TRUE),
+  #           Mammal = mean(Mammal, na.rm = TRUE),
+  #           Plant = mean(Plant, na.rm = TRUE),
+  #           Land_protected = mean(Land_protected, na.rm = TRUE),
+  #           Marine_protected = mean(Marine_protected, na.rm = TRUE)) %>% 
+  mutate_at(.vars = c("Gini", "Idh", "Education"),
+            .funs = mscale) %>%
+  pivot_longer(cols = -c(iso3)) %>%
+  ggplot() +
+  geom_boxplot(mapping = aes(y = name, x = value)) +
+  labs(x = NULL, y =NULL) +
+  theme_bw()
