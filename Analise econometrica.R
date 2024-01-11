@@ -120,7 +120,6 @@ gini_1 <- gini_1 %>%
                names_transform = as.integer,
                values_to = "Gini_2")
 
-
 tbl <- left_join(tbl, gini_1, by=c("country_name"="country", "year"="year"))
 
 tbl <- mutate(tbl, Gini = Gini_2)
@@ -139,14 +138,14 @@ tbl[, .(iso3, Ich, hc, pwt_hc)] %>% summary()
 tbl[is.na(hc) & !is.na(pwt_hc),  .(iso3, Ich, hc, pwt_hc)]
 
 # sobrescrevo informacao original
-tbl[, pwt_hc := hc]
+tbl[, pwt_hc2 := hc]
 
 # crio modelo linear
 tbl[, .(iso3, Ich, hc, pwt_hc)] %>% 
   lm(hc~Ich, data = .) -> ich_mdl
 
 #  Roda modelo linear para completar Hc
-tbl[is.na(hc) & !is.na(Ich), hc := (ich_mdl$coefficients[1] + ich_mdl$coefficients[2]*Ich)]
+# tbl[is.na(hc) & !is.na(Ich), hc := (ich_mdl$coefficients[1] + ich_mdl$coefficients[2]*Ich)]
 
 
 # Data completion of ctfp -------------------------------------------------
@@ -298,6 +297,27 @@ pmdl_01 <- plm(g ~ Gini + Idh + pca1_nature + dlnCO2*ctfp + GDP_1 + Education + 
 
 summary(pmdl_01)
 
+pmdl_01.1 <- plm(g ~ GDP_1 +
+                 ctfp +
+                 dlnCO2 + 
+                 dlnCO2*ctfp +
+                 pwt_hc + 
+                 RuleOfLaw +
+                 Gini + 
+                 Idh +
+                  # pca1_nature +
+                  Forest_perc +
+                  # Natural_resources_rents +
+                 1,
+               data=tbl,
+               # effect = "individual",
+               # effect = "time",
+               effect = "twoways",
+               index=c("iso3", "year"),
+               model="within")
+
+summary(pmdl_01)
+
 # 114 paises com 5 anos cada (total de 570 pontos)
 
 # List of economic crises
@@ -374,10 +394,62 @@ tbl_ols
 
 
 #  Run a OLS Estimation on the averages
-pmdl_05 <- lm(g ~ Gini + Idh + pca1_nature + dlnCO2*ctfp + GDP_1 + Education + Forest_perc + Natural_resources_rents + RuleOfLaw,
+pmdl_05 <- lm(g ~ GDP_1 +
+                ctfp +
+                dlnCO2 + 
+                dlnCO2*ctfp +
+                Education + 
+                RuleOfLaw +
+                Gini + 
+                Idh +
+                # pca1_nature +
+                # Forest_perc +
+                # Natural_resources_rents +
+                1,
               data=tbl_ols)
 
 summary(pmdl_05)
+
+
+pmdl_05.1 <- lm(g ~ GDP_1 +
+                   ctfp +
+                   dlnCO2 + 
+                   dlnCO2*ctfp +
+                   pwt_hc + 
+                   RuleOfLaw +
+                   Gini + 
+                   Idh +
+                   # pca1_nature +
+                   Forest_perc +
+                   # Natural_resources_rents +
+                   1,
+                 data=tbl)
+
+summary(pmdl_05.1)
+
+sign(pmdl_05$coefficients[
+  c("GDP_1",
+      "ctfp",
+      "dlnCO2",
+      "ctfp:dlnCO2",
+      "Education", 
+      "RuleOfLaw",
+      "Gini",
+      "Idh",
+      "pca1_nature",
+      "Forest_perc",
+      "Natural_resources_rents"
+      )]) == c(-1,
+               1,
+               1,
+               -1,
+               1, 
+               1,
+               -1,
+               1,
+               1,
+               1
+               )
 
 # tbl_ols %>% select(g, Gini, Idh, pca1_nature, dlnCO2, ctfp, GDP_1, Education, Forest_perc, Natural_resources_rents, RuleOfLaw) %>% 
 #   na.omit()
